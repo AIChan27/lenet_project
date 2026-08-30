@@ -11,6 +11,13 @@ def relu(x):
     return np.maximum(0, x)
 
 
+# 输出层softmax函数
+def softmax(x):
+    x = x - np.max(x, axis=-1, keepdims=True)
+    out = np.exp(x) / np.sum(np.exp(x), axis=-1, keepdims=True)
+    return out
+
+
 # 损失函数：均方误差 sum_squared_error
 def sum_squared_error(y, t):
     return 0.5 * np.sum((y - t) ** 2)
