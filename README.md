@@ -3,7 +3,7 @@
 <div align="center">
   <img src="https://img.shields.io/badge/Python-3.8%2B-blue?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/NumPy-1.24-green?logo=numpy&logoColor=white" alt="NumPy">
-  <img src="https://img.shields.io/badge/Status-手搓成功-brightgreen" alt="Status">
+  <img src="https://img.shields.io/badge/Status-手搓中......-brightgreen" alt="Status">
 </div>
 
 ---
