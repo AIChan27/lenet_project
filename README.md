@@ -50,7 +50,6 @@
 
 ## 📂 目录结构
 
-```text
 lenet_project/
 ├── dataset/             # dataset 文件夹（包含 mnist.py）
 ├── common/              # common 文件夹（包含 layers.py, gradient.py, functions.py, util.py）
