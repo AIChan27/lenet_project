@@ -85,12 +85,33 @@ class LeNet5:
 
     def predict(self, x):
         for layer in self.layers.values():
-            x=layer.forward(x)
+            x = layer.forward(x)
         return x
 
     def loss(self, x, t):
         y = self.predict(x)
         return self.last_layer.forward(y, t)
+
+    # 计算识别准确率
+    def accuracy(self, x, t):
+        y = self.predict(x)
+        # 找出每一行（每张图）中，概率最大的那个分类的索引。
+        y = np.argmax(y, axis=1)
+        # 如果 t 是独热编码（(N, 10)），也把它转成数字索引（(N,)）
+        if t.ndim != 1:
+            t = np.argmax(t, axis=1)
+        """
+        ----------------------------------------------------------------------
+        使用一个例子来理解 accuracy = np.sum(y == t) / float(x.shape[0])
+        假设：y = [5, 3, 7]、t = [5, 1, 7]、当前这批有100 张图
+        ① y == t 是一个布尔数组，根据例子，数组返回[True, False, True]
+        ② 在 NumPy 中，True --> 1，False --> 0。np.sum([True, False, True]) 的结果是 2（说明100张图里猜对了2张）。
+        ③ float(x.shape[0]) 就是 N（当前这批有多少张图，此时N=100）。
+        ④ 最终结果：2 / 100 = 0.02（2% 的准确率）。这个结果会被送到 Trainer 里打印出来，用来判断模型有没有过拟合。
+        ----------------------------------------------------------------------
+        """
+        accuracy = np.sum(y == t) / float(x.shape[0])
+        return accuracy
 
     def gradient(self, x, t):
         self.loss(x, t)
@@ -99,16 +120,16 @@ class LeNet5:
         layers = list(self.layers.values())
         layers.reverse()
         for layer in layers:
-            dout=layer.backward(dout)
-        grads={}
-        grads['W1']=self.layers["Convolution_1"].dW
-        grads['b1']=self.layers["Convolution_1"].db
-        grads['W2']=self.layers["Convolution_2"].dW
-        grads['b2']=self.layers["Convolution_2"].db
-        grads['W3']=self.layers["Affine_1"].dW
-        grads['b3']=self.layers["Affine_1"].db
-        grads['W4']=self.layers["Affine_2"].dW
-        grads['b4']=self.layers["Affine_2"].db
-        grads['W5']=self.layers["Affine_3"].dW
-        grads['b5']=self.layers["Affine_3"].db
+            dout = layer.backward(dout)
+        grads = {}
+        grads["W1"] = self.layers["Convolution_1"].dW
+        grads["b1"] = self.layers["Convolution_1"].db
+        grads["W2"] = self.layers["Convolution_2"].dW
+        grads["b2"] = self.layers["Convolution_2"].db
+        grads["W3"] = self.layers["Affine_1"].dW
+        grads["b3"] = self.layers["Affine_1"].db
+        grads["W4"] = self.layers["Affine_2"].dW
+        grads["b4"] = self.layers["Affine_2"].db
+        grads["W5"] = self.layers["Affine_3"].dW
+        grads["b5"] = self.layers["Affine_3"].db
         return grads
