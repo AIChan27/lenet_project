@@ -52,17 +52,6 @@
 
 ## 📂 目录结构
 
-- 📂 lenet_project/
-| 文件/文件夹 | 注释 |
-| :--- | :--- |
-| 📂 dataset/ | 数据集文件夹（包含 mnist.py） |
-| 📂 common/  | 工具文件夹（包含 layers.py, gradient.py, functions.py, util.py, optimizer.py） |
-| 📂 pdf/     | 存放此次项目参考论文或资料 |
-| 📄 lenet5.py | 1. 这里写 LeNet-5 的网络类 |
-| 📄 trainer.py | 2. 这里写 Trainer 类 |
-| 📄 save_and_load.py | 3. 这里写 pkl 保存和加载的测试 |
-| 📄 main.py | 4. 主程序：把上面全部串起来 |
-
 <pre>
 lenet_project/
 ├── dataset/             # dataset 文件夹（包含 mnist.py）
