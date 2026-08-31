@@ -1,6 +1,6 @@
 import numpy as np
-from functions import *
-from util import *
+from common.functions import *
+from common.util import *
 
 # Conv-->ReLU-->Pooling（MAX）-->Conv-->ReLU-->Pooling（MAX）-->Conv-->Affine-->Affine-->Softmax
 
