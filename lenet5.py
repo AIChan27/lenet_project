@@ -1,0 +1,114 @@
+import numpy as np
+from collections import OrderedDict
+from common.layers import *
+
+"""
+----------------------------------------------------------------------
+层名称	操作	输入维度	输出维度	参数/备注
+
+C1	卷积 + ReLU	(N, 1, 28, 28)	(N, 6, 24, 24)	6个 5x5，步长1，无填充
+
+S2	池化	(N, 6, 24, 24)	(N, 6, 12, 12)	窗口 2x2，步长2
+
+C3	卷积 + ReLU	(N, 6, 12, 12)	(N, 16, 8, 8)	16个 5x5，步长1
+
+S4	池化	(N, 16, 8, 8)	(N, 16, 4, 4)	窗口 2x2，步长2
+
+F5	展平 + Affine	(N, 256)	(N, 120)	全连接
+
+F6	Affine	(N, 120)	(N, 84)	全连接
+
+Out	Affine + Softmax	(N, 84)	(N, 10)	输出层
+----------------------------------------------------------------------
+"""
+
+
+class LeNet5:
+    def __init__(
+        self,
+        input_dim=(1, 28, 28),
+        conv_param_1={"filter_num": 6, "filter_size": 5, "pad": 0, "stride": 1},
+        conv_param_2={"filter_num": 16, "filter_size": 5, "pad": 0, "stride": 1},
+        hidden_size_1=120,
+        hidden_size_2=84,
+        output_size=10,
+        weight_init_std=0.01,
+    ):
+        # 初始化权重
+        self.params = {}
+        # C1	卷积 + ReLU	(N, 1, 28, 28)	(N, 6, 24, 24)	6个 5x5，步长1，无填充
+        self.params["W1"] = weight_init_std * np.random.randn(6, input_dim[0], 5, 5)
+        self.params["b1"] = np.zeros(6)
+        # C3	卷积 + ReLU	(N, 6, 12, 12)	(N, 16, 8, 8)	16个 5x5，步长1
+        self.params["W2"] = weight_init_std * np.random.randn(16, 6, 5, 5)
+        self.params["b2"] = np.zeros(16)
+        # F5	展平+Affine + ReLU	(N, 256)	(N, 120)	全连接
+        # 为什么是 256 ？因为输入是 16 * 4 * 4 = 256
+        self.params["W3"] = weight_init_std * np.random.randn(256, hidden_size_1)
+        self.params["b3"] = np.zeros(hidden_size_1)
+        # F6	Affine + ReLU	(N, 120)	(N, 84)	全连接
+        self.params["W4"] = weight_init_std * np.random.randn(
+            hidden_size_1, hidden_size_2
+        )
+        self.params["b4"] = np.zeros(hidden_size_2)
+        # Out	Affine + Softmax	(N, 84)	(N, 10)	输出层
+        self.params["W5"] = weight_init_std * np.random.randn(
+            hidden_size_2, output_size
+        )
+        self.params["b5"] = np.zeros(output_size)
+        # 生成层：
+        # Convolution-->ReLU-->Pooling-->Convolution-->ReLU-->Pooling-->展平+Affine1 (256→120)-->ReLU-->Affine2 (120→84)-->ReLU-->Affine3 (84→10)-->Softmax
+        self.layers = OrderedDict()
+        self.layers["Convolution_1"] = Convolution(
+            self.params["W1"],
+            self.params["b1"],
+            conv_param_1["stride"],
+            conv_param_1["pad"],
+        )
+        self.layers["ReLU_1"] = ReLU()
+        self.layers["Pooling_1"] = Pooling(pool_h=2, pool_w=2, stride=2)
+        self.layers["Convolution_2"] = Convolution(
+            self.params["W2"],
+            self.params["b2"],
+            conv_param_2["stride"],
+            conv_param_2["pad"],
+        )
+        self.layers["ReLU_2"] = ReLU()
+        self.layers["Pooling_2"] = Pooling(pool_h=2, pool_w=2, stride=2)
+        # 展平+Affine1 (256→120)-->ReLU-->Affine2 (120→84)-->ReLU-->Affine3 (84→10)-->Softmax
+        self.layers["Affine_1"] = Affine(self.params["W3"], self.params["b3"])
+        self.layers["ReLU_3"] = ReLU()
+        self.layers["Affine_2"] = Affine(self.params["W4"], self.params["b4"])
+        self.layers["ReLU_4"] = ReLU()
+        self.layers["Affine_3"] = Affine(self.params["W5"], self.params["b5"])
+        self.last_layer = SoftmaxWithLoss()
+
+    def predict(self, x):
+        for layer in self.layers.values():
+            x=layer.forward(x)
+        return x
+
+    def loss(self, x, t):
+        y = self.predict(x)
+        return self.last_layer.forward(y, t)
+
+    def gradient(self, x, t):
+        self.loss(x, t)
+        dout = 1
+        dout = self.last_layer.backward(dout)
+        layers = list(self.layers.values())
+        layers.reverse()
+        for layer in layers:
+            dout=layer.backward(dout)
+        grads={}
+        grads['W1']=self.layers["Convolution_1"].dW
+        grads['b1']=self.layers["Convolution_1"].db
+        grads['W2']=self.layers["Convolution_2"].dW
+        grads['b2']=self.layers["Convolution_2"].db
+        grads['W3']=self.layers["Affine_1"].dW
+        grads['b3']=self.layers["Affine_1"].db
+        grads['W4']=self.layers["Affine_2"].dW
+        grads['b4']=self.layers["Affine_2"].db
+        grads['W5']=self.layers["Affine_3"].dW
+        grads['b5']=self.layers["Affine_3"].db
+        return grads
