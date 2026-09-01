@@ -63,3 +63,102 @@ lenet_project/
 └── main.py                   # 4. 主程序：把上面全部串起来
 └── debugfromgradient.py      # 5. 测试程序，通过numerical_gradient找出梯度bug
 </pre>
+
+## 踩坑指南
+首先程序完成后，运行main.py，得到了不理想的结果：
+
+<pre>
+Epoch 1/10 | 训练集: 0.1136 | 验证集: 0.1064
+Epoch 2/10 | 训练集: 0.1035 | 验证集: 0.1090
+Epoch 3/10 | 训练集: 0.1035 | 验证集: 0.1090
+Epoch 4/10 | 训练集: 0.1035 | 验证集: 0.1090
+Epoch 5/10 | 训练集: 0.1035 | 验证集: 0.1090
+Epoch 6/10 | 训练集: 0.1035 | 验证集: 0.1090
+验证集连续多轮未提升，触发早停！
+训练结束！已恢复验证集最高准确率（0.1090）时的模型参数。
+✅ 模型参数已成功保存到 lenet_params.pkl！
+最终测试结果为：0.1028
+</pre>
+
+程序发生了梯度消失/死区，准确率稳定在 0.1035（10.35%），验证集稳定在 0.1090（10.90%）。
+MNIST 是 10 分类问题，如果瞎猜，准确率就是 10%。这说明模型目前完全没有在学，只是在“均匀乱猜”。
+
+首先，由于 Loss 完全没有下降，所以我怀疑 layers.py 或 lenet5.py 里可能有隐藏的梯度计算 Bug。
+于是我执行了debugfromgradient.py，使用里面的numerical_gradient（数值梯度）来对证，得到如下结果：
+
+<pre>
+W1 的最大误差: 6.32092435097195e-07
+b1 的最大误差: 6.916253897219903e-06
+W2 的最大误差: 1.24730879076222e-07
+b2 的最大误差: 1.637048975216544e-05
+W3 的最大误差: 3.73632748345295e-08
+b3 的最大误差: 0.0002379821193276262
+W4 的最大误差: 7.375460396465258e-12
+b4 的最大误差: 0.0053471366801005615
+W5 的最大误差: 9.962516039926472e-12
+b5 的最大误差: 1.5012118034785082e-07
+</pre>
+
+显然误差处于正常范围内！通过查看论文以及与DeepSeek老师交流，了解到原版 LeNet-5 用的是 Sigmoid，而我使用了 ReLU。
+根据之前对鱼书的学习，了解到当激活函数使用ReLU时，一般推荐使用ReLU专用的初始值，也就是Kaiming He等人推荐的初始值，也称为“He初始值”
+
+原代码：
+<pre>
+# C1	卷积 + ReLU	(N, 1, 28, 28)	(N, 6, 24, 24)	6个 5x5，步长1，无填充
+self.params["W1"] = weight_init_std * np.random.randn(6, input_dim[0], 5, 5)
+self.params["b1"] = np.zeros(6)
+# C3	卷积 + ReLU	(N, 6, 12, 12)	(N, 16, 8, 8)	16个 5x5，步长1
+self.params["W2"] = weight_init_std * np.random.randn(16, 6, 5, 5)
+self.params["b2"] = np.zeros(16)
+# F5	展平+Affine + ReLU	(N, 256)	(N, 120)	全连接
+# 为什么是 256 ？因为输入是 16 * 4 * 4 = 256
+self.params["W3"] = weight_init_std * np.random.randn(256, hidden_size_1)
+self.params["b3"] = np.zeros(hidden_size_1)
+# F6	Affine + ReLU	(N, 120)	(N, 84)	全连接
+self.params["W4"] = weight_init_std * np.random.randn(
+    hidden_size_1, hidden_size_2
+)
+self.params["b4"] = np.zeros(hidden_size_2)
+# Out	Affine + Softmax	(N, 84)	(N, 10)	输出层
+self.params["W5"] = weight_init_std * np.random.randn(
+    hidden_size_2, output_size
+)
+self.params["b5"] = np.zeros(output_size)
+</pre>
+
+使用“He初始值”之后的代码：
+<pre>
+# C1 卷积层使用 He 初始化（输入通道 * 卷积核大小 = node_num_1）
+node_num_1 = input_dim[0] * 5 * 5  # 第一层：1 * 5 * 5 = 25
+self.params["W1"] = np.random.randn(6, input_dim[0], 5, 5) *math.sqrt(2) / np.sqrt(node_num_1)
+self.params["b1"] = np.zeros(6)
+# C3 卷积层使用 He 初始化（输入通道 * 卷积核大小 = node_num_2）
+node_num_2 = 6 * 5 * 5  # 第二层：6 * 5 * 5 = 150
+self.params["W2"] = np.random.randn(16, 6, 5, 5) *math.sqrt(2) / np.sqrt(node_num_2)
+self.params["b2"] = np.zeros(16)
+# F5 展平+Affine + ReLU 全连接层使用 He 初始化（node_num = 16 * 4 * 4 = 256）
+self.params["W3"] = np.random.randn(256, hidden_size_1) *math.sqrt(2) / np.sqrt(256)
+self.params["b3"] = np.zeros(hidden_size_1)
+# F6 Affine + ReLU 全连接层（120 -> 84）
+self.params["W4"] = np.random.randn(hidden_size_1, hidden_size_2) *math.sqrt(2) / np.sqrt(hidden_size_1)
+self.params["b4"] = np.zeros(hidden_size_2)
+# Out Affine + Softmax 全连接层（84 -> 10）
+self.params["W5"] = np.random.randn(hidden_size_2, output_size) *math.sqrt(2) / np.sqrt(hidden_size_2)
+self.params["b5"] = np.zeros(output_size)
+</pre>
+
+程序运行后出现了新的问题：
+<pre>
+Epoch 1/10 | 训练集: 0.2204 | 验证集: 0.2301
+Epoch 2/10 | 训练集: 0.2477 | 验证集: 0.2610
+Epoch 3/10 | 训练集: 0.2830 | 验证集: 0.2954
+Epoch 4/10 | 训练集: 0.3270 | 验证集: 0.3360
+Epoch 5/10 | 训练集: 0.3673 | 验证集: 0.3800
+Epoch 6/10 | 训练集: 0.4077 | 验证集: 0.4204
+验证集连续多轮未提升，触发早停！
+训练结束！已恢复验证集最高准确率（0.4204）时的模型参数。
+✅ 模型参数已成功保存到 lenet_params.pkl！
+最终测试结果为：0.4252
+</pre>
+
+显然判断早停的函数出现了逻辑错误，遂对早停代码进行修改：

@@ -1,4 +1,5 @@
 import numpy as np
+import math
 from collections import OrderedDict
 from common.layers import *
 
@@ -36,25 +37,51 @@ class LeNet5:
     ):
         # 初始化权重
         self.params = {}
-        # C1	卷积 + ReLU	(N, 1, 28, 28)	(N, 6, 24, 24)	6个 5x5，步长1，无填充
-        self.params["W1"] = weight_init_std * np.random.randn(6, input_dim[0], 5, 5)
+        # # C1	卷积 + ReLU	(N, 1, 28, 28)	(N, 6, 24, 24)	6个 5x5，步长1，无填充
+        # self.params["W1"] = weight_init_std * np.random.randn(6, input_dim[0], 5, 5)
+        # self.params["b1"] = np.zeros(6)
+
+        # C1 卷积层使用 He 初始化（输入通道 * 卷积核大小 = node_num_1）
+        node_num_1 = input_dim[0] * 5 * 5  # 第一层：1 * 5 * 5 = 25
+        self.params["W1"] = np.random.randn(6, input_dim[0], 5, 5) *math.sqrt(2) / np.sqrt(node_num_1)
         self.params["b1"] = np.zeros(6)
-        # C3	卷积 + ReLU	(N, 6, 12, 12)	(N, 16, 8, 8)	16个 5x5，步长1
-        self.params["W2"] = weight_init_std * np.random.randn(16, 6, 5, 5)
+
+        # # C3	卷积 + ReLU	(N, 6, 12, 12)	(N, 16, 8, 8)	16个 5x5，步长1
+        # self.params["W2"] = weight_init_std * np.random.randn(16, 6, 5, 5)
+        # self.params["b2"] = np.zeros(16)
+
+        # C3 卷积层使用 He 初始化（输入通道 * 卷积核大小 = node_num_2）
+        node_num_2 = 6 * 5 * 5  # 第二层：6 * 5 * 5 = 150
+        self.params["W2"] = np.random.randn(16, 6, 5, 5) *math.sqrt(2) / np.sqrt(node_num_2)
         self.params["b2"] = np.zeros(16)
-        # F5	展平+Affine + ReLU	(N, 256)	(N, 120)	全连接
-        # 为什么是 256 ？因为输入是 16 * 4 * 4 = 256
-        self.params["W3"] = weight_init_std * np.random.randn(256, hidden_size_1)
+
+        # # F5	展平+Affine + ReLU	(N, 256)	(N, 120)	全连接
+        # # 为什么是 256 ？因为输入是 16 * 4 * 4 = 256
+        # self.params["W3"] = weight_init_std * np.random.randn(256, hidden_size_1)
+        # self.params["b3"] = np.zeros(hidden_size_1)
+
+        # F5 展平+Affine + ReLU 全连接层使用 He 初始化（node_num = 16 * 4 * 4 = 256）
+        self.params["W3"] = np.random.randn(256, hidden_size_1) *math.sqrt(2) / np.sqrt(256)
         self.params["b3"] = np.zeros(hidden_size_1)
-        # F6	Affine + ReLU	(N, 120)	(N, 84)	全连接
-        self.params["W4"] = weight_init_std * np.random.randn(
-            hidden_size_1, hidden_size_2
-        )
+
+        # # F6	Affine + ReLU	(N, 120)	(N, 84)	全连接
+        # self.params["W4"] = weight_init_std * np.random.randn(
+        #     hidden_size_1, hidden_size_2
+        # )
+        # self.params["b4"] = np.zeros(hidden_size_2)
+
+        # F6 Affine + ReLU 全连接层（120 -> 84）
+        self.params["W4"] = np.random.randn(hidden_size_1, hidden_size_2) *math.sqrt(2) / np.sqrt(hidden_size_1)
         self.params["b4"] = np.zeros(hidden_size_2)
-        # Out	Affine + Softmax	(N, 84)	(N, 10)	输出层
-        self.params["W5"] = weight_init_std * np.random.randn(
-            hidden_size_2, output_size
-        )
+
+        # # Out	Affine + Softmax	(N, 84)	(N, 10)	输出层
+        # self.params["W5"] = weight_init_std * np.random.randn(
+        #     hidden_size_2, output_size
+        # )
+        # self.params["b5"] = np.zeros(output_size)
+
+        # Out Affine + Softmax 全连接层（84 -> 10）
+        self.params["W5"] = np.random.randn(hidden_size_2, output_size) *math.sqrt(2) / np.sqrt(hidden_size_2)
         self.params["b5"] = np.zeros(output_size)
         # 生成层：
         # Convolution-->ReLU-->Pooling-->Convolution-->ReLU-->Pooling-->展平+Affine1 (256→120)-->ReLU-->Affine2 (120→84)-->ReLU-->Affine3 (84→10)-->Softmax
