@@ -3,7 +3,7 @@
 <div align="center">
   <img src="https://img.shields.io/badge/Python-3.8%2B-blue?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/NumPy-1.24-green?logo=numpy&logoColor=white" alt="NumPy">
-  <img src="https://img.shields.io/badge/Status-手搓初步成功-brightgreen" alt="Status">
+  <img src="https://img.shields.io/badge/Status-第一阶段完成！-brightgreen" alt="Status">
 </div>
 
 ---
@@ -25,7 +25,7 @@
 ### 🎯 第二阶段：优化现有工程
 - **调大训练轮次**：将 `epochs` 从 `10` 增加至 `30` 或 `50`，让模型有充足时间收敛至更高的精度（目标突破 90%）。
 - **调整 Batch Size**：将 `mini_batch_size` 从 `100` 调大为 `256`，提高梯度稳定性。
-- **加入学习率衰减**：在训练中途（如 `epoch == 15` 时）手动将 `lr` 降为原来的 1/10（例如从 `0.001` 调整为 `0.0001`）（在 Trainer 里加个简单的 if epoch == 15: optimizer.lr *= 0.1，或者直接改 main.py），实现后期精准微调。
+- **加入学习率衰减**：在训练中途（如 `epoch == 15` 时）手动将 `lr` 降为原来的 1/10（例如从 `0.001` 调整为 `0.0001`）（在 Trainer 里加个简单的 `if epoch == 15: optimizer.lr *= 0.1`，或者直接改 `main.py`），实现后期精准微调。
 - **尝试数据增强**：在 `main.py` 加载数据后，对训练集随机做轻微翻转或添加噪声，提升模型泛化能力。
 
 ### 📊 第三阶段：工程化完善
