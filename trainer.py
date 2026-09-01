@@ -117,28 +117,43 @@ class Trainer:
             self.train_acc_list.append(train_acc)
             self.val_acc_list.append(val_acc)
             print(f"Epoch {epoch+1}/{self.epochs} | 训练集: {train_acc:.4f} | 验证集: {val_acc:.4f}")
+            # # --- ③ 防过拟合监控（保存最佳 & 早停） ---
+            # # 如果验证集准确率创了新高，就保存当前的所有参数
+            # if val_acc>best_val_acc:
+            #     best_val_acc=val_acc
+            #     # 深拷贝，防止后续更新变味
+            #     best_params=copy.deepcopy(self.network.params)
+            # """
+            # ----------------------------------------------------------------------
+            # 早停判断：如果最近 5 轮的验证集成绩都没有超过之前的最佳成绩
+            # 通俗理解：只要验证集准确率一直没超过“历史最高点（best_val_acc）”，我就认为它正在走向过拟合。因为它虽然还在训练，但已经“不会做新题”了。
+            # 拆分if语句：
+            # 前半部分：len(self.val_acc_list) > patience：
+            #     意思是你至少已经跑完 patience+1 个 epoch 了，防止训练刚开始（还没积累足够数据）就误判为早停。
+            # 后半部分：all(self.val_acc_list[-i] <= best_val_acc for i in range(1, patience + 1))：
+            #     range(1, patience + 1) 生成序列 [1, 2, 3, 4, 5]。
+            #     对于每个 i，self.val_acc_list[-i] 代表最近第 i 轮的验证集成绩（即倒数第1轮、倒数第2轮...倒数第5轮）。
+            #     <= best_val_acc：判断这5轮的每一轮成绩，是不是都小于等于历史最高成绩。
+            #     all(...)：只有当这5个条件全部成立时，整体才是 True。
+            # ----------------------------------------------------------------------
+            # """
+            # if len(self.val_acc_list)>patience and all(self.val_acc_list[-i]<=best_val_acc for i in range(1,patience+1)):
+            #     print("验证集连续多轮未提升，触发早停！")
+            #     break
             # --- ③ 防过拟合监控（保存最佳 & 早停） ---
             # 如果验证集准确率创了新高，就保存当前的所有参数
-            if val_acc>best_val_acc:
-                best_val_acc=val_acc
+            if val_acc > best_val_acc:
+                best_val_acc = val_acc
                 # 深拷贝，防止后续更新变味
-                best_params=copy.deepcopy(self.network.params)
-            """
-            ----------------------------------------------------------------------
-            早停判断：如果最近 5 轮的验证集成绩都没有超过之前的最佳成绩
-            通俗理解：只要验证集准确率一直没超过“历史最高点（best_val_acc）”，我就认为它正在走向过拟合。因为它虽然还在训练，但已经“不会做新题”了。
-            拆分if语句：
-            前半部分：len(self.val_acc_list) > patience：
-                意思是你至少已经跑完 patience+1 个 epoch 了，防止训练刚开始（还没积累足够数据）就误判为早停。
-            后半部分：all(self.val_acc_list[-i] <= best_val_acc for i in range(1, patience + 1))：
-                range(1, patience + 1) 生成序列 [1, 2, 3, 4, 5]。
-                对于每个 i，self.val_acc_list[-i] 代表最近第 i 轮的验证集成绩（即倒数第1轮、倒数第2轮...倒数第5轮）。
-                <= best_val_acc：判断这5轮的每一轮成绩，是不是都小于等于历史最高成绩。
-                all(...)：只有当这5个条件全部成立时，整体才是 True。
-            ----------------------------------------------------------------------
-            """
-            if len(self.val_acc_list)>patience and all(self.val_acc_list[-i]<=best_val_acc for i in range(1,patience+1)):
-                print("验证集连续多轮未提升，触发早停！")
+                best_params = copy.deepcopy(self.network.params)
+                # 只要创了新高，就把“没进步”的计数器清零！
+                no_improve_count = 0 
+            else:
+                # 如果没创新高，计数器加 1
+                no_improve_count += 1
+            # 早停判断：连续耐心轮次（patience）没进步，才停止！
+            if no_improve_count >= patience:
+                print(f"验证集连续 {patience} 轮未提升，触发早停！")
                 break
         # --- ④ 训练结束，恢复最佳状态 ---
         if best_params is not None:

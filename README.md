@@ -82,7 +82,6 @@ Epoch 6/10 | 训练集: 0.1035 | 验证集: 0.1090
 
 程序发生了梯度消失/死区，准确率稳定在 0.1035（10.35%），验证集稳定在 0.1090（10.90%）。
 MNIST 是 10 分类问题，如果瞎猜，准确率就是 10%。这说明模型目前完全没有在学，只是在“均匀乱猜”。
-
 首先，由于 Loss 完全没有下降，所以我怀疑 layers.py 或 lenet5.py 里可能有隐藏的梯度计算 Bug。
 于是我执行了debugfromgradient.py，使用里面的numerical_gradient（数值梯度）来对证，得到如下结果：
 
@@ -162,3 +161,52 @@ Epoch 6/10 | 训练集: 0.4077 | 验证集: 0.4204
 </pre>
 
 显然判断早停的函数出现了逻辑错误，遂对早停代码进行修改：
+原代码：
+
+<pre>
+if val_acc>best_val_acc:
+    best_val_acc=val_acc
+    # 深拷贝，防止后续更新变味
+    best_params=copy.deepcopy(self.network.params)
+if len(self.val_acc_list)>patience and all(self.val_acc_list[-i]<=best_val_acc for i in range(1,patience+1)):
+    print("验证集连续多轮未提升，触发早停！")
+    break
+</pre>
+
+修改代码：
+
+<pre>
+if val_acc > best_val_acc:
+  best_val_acc = val_acc
+  # 深拷贝，防止后续更新变味
+  best_params = copy.deepcopy(self.network.params)
+  # 只要创了新高，就把“没进步”的计数器清零！
+  no_improve_count = 0 
+else:
+  # 如果没创新高，计数器加 1
+  no_improve_count += 1
+# 早停判断：连续耐心轮次（patience）没进步，才停止！
+if no_improve_count >= patience:
+  print(f"验证集连续 {patience} 轮未提升，触发早停！")
+  break
+</pre>
+
+此时程序运行结果为：
+
+<pre>
+Epoch 1/10 | 训练集: 0.1749 | 验证集: 0.1823
+Epoch 2/10 | 训练集: 0.1913 | 验证集: 0.1992
+Epoch 3/10 | 训练集: 0.2020 | 验证集: 0.2093
+Epoch 4/10 | 训练集: 0.2472 | 验证集: 0.2610
+Epoch 5/10 | 训练集: 0.2851 | 验证集: 0.3020
+Epoch 6/10 | 训练集: 0.3173 | 验证集: 0.3355
+Epoch 7/10 | 训练集: 0.3564 | 验证集: 0.3745
+Epoch 8/10 | 训练集: 0.4038 | 验证集: 0.4240
+Epoch 9/10 | 训练集: 0.4652 | 验证集: 0.4872
+Epoch 10/10 | 训练集: 0.5298 | 验证集: 0.5511
+训练结束！已恢复验证集最高准确率（0.5511）时的模型参数。
+✅ 模型参数已成功保存到 lenet_params.pkl！
+最终测试结果为：0.5407
+</pre>
+
+目前看，程序运行成功！
