@@ -38,7 +38,7 @@ trainer = Trainer(
     t_train,
     x_val,
     t_val,
-    epochs=10,
+    epochs=100,
     mini_batch_size=256,
     optimizer="Adam",
     optimizer_param={"lr": 0.001},
