@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.ndimage import rotate
 
 
 # 激活函数 sigmoid
@@ -49,3 +50,34 @@ def cross_entropy_error(y, t):
     ----------------------------------------------------------------------
     """
     return -np.sum(np.log(y[np.arange(batch_size), t] + 1e-7)) / batch_size
+
+
+# 数据增强---几何变换：平移、翻转、旋转
+def data_augmentation(x):
+    max_shift = 2
+    max_rotate = 15
+    batch_size = x.shape[0]
+    x_aug = x.copy()
+    for i in range(batch_size):
+        # 平移
+        if np.random.rand() > 0.5:
+            dx = np.random.randint(-max_shift, max_shift + 1)
+            dy = np.random.randint(-max_shift, max_shift + 1)
+            x_aug[i] = np.roll(x_aug[i], shift=(dy, dx), axis=(1, 2))
+        # 翻转
+        if np.random.rand() > 0.5:
+            x_aug[i] = np.fliplr(x_aug[i])
+        # 旋转
+        if np.random.rand() > 0.5:
+            angle = np.random.uniform(-max_rotate, max_rotate)
+            x_aug[i] = rotate(x_aug[i], angle, reshape=False, mode="constant", cval=0.0)
+    return x_aug
+
+
+# 数据增强---添加噪声：
+def add_noise(x, sigma=0.02):
+    batch_size = x.shape[0]
+    x_aug = x.copy()
+    noise = np.random.randn(*x.shape) * sigma
+    x_noisy = x_aug + noise
+    return np.clip(x_noisy, 0.0, 1.0)

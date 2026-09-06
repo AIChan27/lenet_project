@@ -2,6 +2,7 @@ import numpy as np
 import copy
 from collections import OrderedDict
 from common.optimizer import *
+from common.functions import data_augmentation,add_noise
 
 """
 ----------------------------------------------------------------------
@@ -98,11 +99,20 @@ class Trainer:
         patience = 5
         # 循环开始
         for epoch in range(self.epochs):
+
+            # # 每隔 15 个 epoch，学习率缩小 10 倍
+            # if epoch != 0 and epoch % 15 == 0:
+            #     self.optimizer.lr *= 0.1
+            #     print(f"第 {epoch} 个 epoch，学习率已衰减为 {self.optimizer.lr}")
+
             # --- ① 平时写作业（训练阶段） ---
             # 抽取 mini-batch 将庞大的训练集进行拆分
             batch_mask = np.random.choice(self.train_size, self.batch_size)
             x_batch = self.x_train[batch_mask]
             t_batch = self.t_train[batch_mask]
+            # # 数据增强:几何变换+添加噪声
+            # x_batch=data_augmentation(x_batch)
+            # x_batch=add_noise(x_batch,sigma=0.02)
             # 前向、反向，更新参数
             grads = self.network.gradient(x_batch, t_batch)
             self.optimizer.update(self.network.params, grads)
@@ -112,11 +122,13 @@ class Trainer:
             # --- ② 模拟考（验证阶段） ---
             # 一个 epoch 结束，检查训练集和验证集准确率
             # train_acc：训练集 val_acc：验证集
-            train_acc=self.network.accuracy(self.x_train,self.t_train)
-            val_acc=self.network.accuracy(self.x_val,self.t_val)
+            train_acc = self.network.accuracy(self.x_train, self.t_train)
+            val_acc = self.network.accuracy(self.x_val, self.t_val)
             self.train_acc_list.append(train_acc)
             self.val_acc_list.append(val_acc)
-            print(f"Epoch {epoch+1}/{self.epochs} | 训练集: {train_acc:.4f} | 验证集: {val_acc:.4f}")
+            print(
+                f"Epoch {epoch+1}/{self.epochs} | 训练集: {train_acc:.4f} | 验证集: {val_acc:.4f}"
+            )
             # # --- ③ 防过拟合监控（保存最佳 & 早停） ---
             # # 如果验证集准确率创了新高，就保存当前的所有参数
             # if val_acc>best_val_acc:
@@ -147,7 +159,7 @@ class Trainer:
                 # 深拷贝，防止后续更新变味
                 best_params = copy.deepcopy(self.network.params)
                 # 只要创了新高，就把“没进步”的计数器清零！
-                no_improve_count = 0 
+                no_improve_count = 0
             else:
                 # 如果没创新高，计数器加 1
                 no_improve_count += 1
@@ -157,5 +169,7 @@ class Trainer:
                 break
         # --- ④ 训练结束，恢复最佳状态 ---
         if best_params is not None:
-            self.network.params=best_params
-            print(f"训练结束！已恢复验证集最高准确率（{best_val_acc:.4f}）时的模型参数。")
+            self.network.params = best_params
+            print(
+                f"训练结束！已恢复验证集最高准确率（{best_val_acc:.4f}）时的模型参数。"
+            )
