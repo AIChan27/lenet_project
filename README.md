@@ -8,9 +8,12 @@
 
 ---
 
-## 📚 项目文档
-| [📖 项目简介](README.md) | [🚧 踩坑指南](TROUBLESHOOTING.md) |
-| :--- | :--- |
+[![📖 项目简介](https://img.shields.io/badge/📖-项目简介-blue)](README.md)
+[![🚧 踩坑指南](https://img.shields.io/badge/🚧-踩坑指南-orange)](TROUBLESHOOTING.md)
+
+---
+
+## 📖 项目简介
 这是基于《深度学习入门：基于Python的理论与实现》学习后，**纯手搓（不使用PyTorch框架）** 的 LeNet-5 卷积神经网络实现。本项目用于深入理解卷积、池化、反向传播的底层数学原理。
 
 > ⚠️ **声明1**：现阶段util.py和mnist.py直接照搬鱼书代码！
