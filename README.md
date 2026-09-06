@@ -3,17 +3,17 @@
 <div align="center">
   <img src="https://img.shields.io/badge/Python-3.8%2B-blue?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/NumPy-1.24-green?logo=numpy&logoColor=white" alt="NumPy">
-  <img src="https://img.shields.io/badge/Status-第一阶段完成！-brightgreen" alt="Status">
+  <img src="https://img.shields.io/badge/Status-第二阶段完成！-brightgreen" alt="Status">
 </div>
 
 ---
 
 <div align="center">
   <a href="README.md">
-    <img src="https://img.shields.io/badge/📖-项目简介-blue" alt="项目简介" height="35">
+    <img src="https://img.shields.io/badge/📖-项目简介-blue" alt="项目简介" height="40">
   </a>
   <a href="TROUBLESHOOTING.md">
-    <img src="https://img.shields.io/badge/🚧-踩坑指南-orange" alt="踩坑指南" height="35">
+    <img src="https://img.shields.io/badge/🚧-踩坑指南-orange" alt="踩坑指南" height="40">
   </a>
 </div>
 
@@ -36,7 +36,9 @@
 - **任务进度**：第一阶段任务完成。
 
 **📈 第一阶段训练配置与运行结果：**
+
 训练配置：
+
 <pre>
 trainer = Trainer(
     network,
@@ -50,7 +52,9 @@ trainer = Trainer(
     optimizer_param={"lr": 0.001},
 )
 </pre>
+
 运行结果：
+
 <pre>
 Epoch 1/10 | 训练集: 0.1749 | 验证集: 0.1823
 Epoch 2/10 | 训练集: 0.1913 | 验证集: 0.1992
@@ -70,15 +74,17 @@ Epoch 10/10 | 训练集: 0.5298 | 验证集: 0.5511
 ---
 
 ### 🎯 第二阶段：优化现有工程
-- **调大训练轮次**：将 `epochs` 从 `10` 增加至 `30` 或 `50`，让模型有充足时间收敛至更高的精度（目标突破 90%）。
+- **调大训练轮次**：将 `epochs` 从 `10` 增加至 `30` 或 `50`，让模型有充足时间收敛至更高的精度。
 - **调整 Batch Size**：将 `mini_batch_size` 从 `100` 调大为 `256`，提高梯度稳定性。
 - **加入学习率衰减**：在训练中途（如 `epoch == 15` 时）手动将 `lr` 降为原来的 1/10（例如从 `0.001` 调整为 `0.0001`）（在 Trainer 里加个简单的 `if epoch == 15: optimizer.lr *= 0.1`，或者直接改 `main.py`），实现后期精准微调。
 - **尝试数据增强**：在 `main.py` 加载数据后，对训练集随机做轻微翻转或添加噪声，提升模型泛化能力。
 
-- **任务进度**：第二阶段任务进行中。
+- **任务进度**：第二阶段任务完成。
 
 **📈 第二阶段训练配置与运行结果：**
+
 训练配置：
+
 <pre>
 # 调大训练轮次以及调整 Batch Size
 trainer = Trainer(
@@ -92,34 +98,79 @@ trainer = Trainer(
     optimizer="Adam",
     optimizer_param={"lr": 0.001},
 )
-# 加入学习率衰减。每隔 15 个 epoch，学习率缩小 10 倍
-if epoch != 0 and epoch % 15 == 0:
+# 加入学习率衰减。每隔 40 个 epoch，学习率缩小 10 倍
+if epoch != 0 and epoch % 40 == 0:
     self.optimizer.lr *= 0.1
     print(f"第 {epoch} 个 epoch，学习率已衰减为 {self.optimizer.lr}")
 # 数据增强:几何变换 + 添加噪声
-x_batch=data_augmentation(x_batch)
-x_batch=add_noise(x_batch,sigma=0.02)
+x_batch=data_augmentation(x_batch,max_shift=1,max_rotate=5)
+x_batch=add_noise(x_batch,sigma=0.005)
 </pre>
+
 运行结果：
+
 <pre>
-Epoch 1/10 | 训练集: 0.1749 | 验证集: 0.1823
-Epoch 2/10 | 训练集: 0.1913 | 验证集: 0.1992
-Epoch 3/10 | 训练集: 0.2020 | 验证集: 0.2093
-Epoch 4/10 | 训练集: 0.2472 | 验证集: 0.2610
-Epoch 5/10 | 训练集: 0.2851 | 验证集: 0.3020
-Epoch 6/10 | 训练集: 0.3173 | 验证集: 0.3355
-Epoch 7/10 | 训练集: 0.3564 | 验证集: 0.3745
-Epoch 8/10 | 训练集: 0.4038 | 验证集: 0.4240
-Epoch 9/10 | 训练集: 0.4652 | 验证集: 0.4872
-Epoch 10/10 | 训练集: 0.5298 | 验证集: 0.5511
-训练结束！已恢复验证集最高准确率（0.5511）时的模型参数。
+Epoch 1/50 | 训练集: 0.0812 | 验证集: 0.0790
+Epoch 2/50 | 训练集: 0.1232 | 验证集: 0.1221
+Epoch 3/50 | 训练集: 0.1590 | 验证集: 0.1636
+Epoch 4/50 | 训练集: 0.2075 | 验证集: 0.2122
+Epoch 5/50 | 训练集: 0.2660 | 验证集: 0.2653
+Epoch 6/50 | 训练集: 0.3110 | 验证集: 0.3082
+Epoch 7/50 | 训练集: 0.3418 | 验证集: 0.3408
+Epoch 8/50 | 训练集: 0.3613 | 验证集: 0.3560
+Epoch 9/50 | 训练集: 0.3626 | 验证集: 0.3581
+Epoch 10/50 | 训练集: 0.3618 | 验证集: 0.3596
+Epoch 11/50 | 训练集: 0.3714 | 验证集: 0.3677
+Epoch 12/50 | 训练集: 0.3806 | 验证集: 0.3753
+Epoch 13/50 | 训练集: 0.3923 | 验证集: 0.3867
+Epoch 14/50 | 训练集: 0.3976 | 验证集: 0.3913
+Epoch 15/50 | 训练集: 0.3965 | 验证集: 0.3916
+Epoch 16/50 | 训练集: 0.3982 | 验证集: 0.3914
+Epoch 17/50 | 训练集: 0.4077 | 验证集: 0.4013
+Epoch 18/50 | 训练集: 0.4305 | 验证集: 0.4245
+Epoch 19/50 | 训练集: 0.4535 | 验证集: 0.4505
+Epoch 20/50 | 训练集: 0.4679 | 验证集: 0.4671
+Epoch 21/50 | 训练集: 0.4774 | 验证集: 0.4760
+Epoch 22/50 | 训练集: 0.4861 | 验证集: 0.4864
+Epoch 23/50 | 训练集: 0.4896 | 验证集: 0.4910
+Epoch 24/50 | 训练集: 0.5042 | 验证集: 0.5067
+Epoch 25/50 | 训练集: 0.5276 | 验证集: 0.5284
+Epoch 26/50 | 训练集: 0.5539 | 验证集: 0.5583
+Epoch 27/50 | 训练集: 0.5852 | 验证集: 0.5927
+Epoch 28/50 | 训练集: 0.6069 | 验证集: 0.6151
+Epoch 29/50 | 训练集: 0.6157 | 验证集: 0.6253
+Epoch 30/50 | 训练集: 0.6221 | 验证集: 0.6361
+Epoch 31/50 | 训练集: 0.6264 | 验证集: 0.6397
+Epoch 32/50 | 训练集: 0.6323 | 验证集: 0.6452
+Epoch 33/50 | 训练集: 0.6354 | 验证集: 0.6511
+Epoch 34/50 | 训练集: 0.6368 | 验证集: 0.6503
+Epoch 35/50 | 训练集: 0.6501 | 验证集: 0.6654
+Epoch 36/50 | 训练集: 0.6690 | 验证集: 0.6823
+Epoch 37/50 | 训练集: 0.6869 | 验证集: 0.7025
+Epoch 38/50 | 训练集: 0.6836 | 验证集: 0.6980
+Epoch 39/50 | 训练集: 0.6995 | 验证集: 0.7122
+Epoch 40/50 | 训练集: 0.7210 | 验证集: 0.7378
+第 40 个 epoch，学习率已衰减为 0.0001
+Epoch 41/50 | 训练集: 0.7248 | 验证集: 0.7416
+Epoch 42/50 | 训练集: 0.7282 | 验证集: 0.7447
+Epoch 43/50 | 训练集: 0.7327 | 验证集: 0.7511
+Epoch 44/50 | 训练集: 0.7370 | 验证集: 0.7567
+Epoch 45/50 | 训练集: 0.7409 | 验证集: 0.7607
+Epoch 46/50 | 训练集: 0.7445 | 验证集: 0.7659
+Epoch 47/50 | 训练集: 0.7469 | 验证集: 0.7684
+Epoch 48/50 | 训练集: 0.7497 | 验证集: 0.7710
+Epoch 49/50 | 训练集: 0.7509 | 验证集: 0.7712
+Epoch 50/50 | 训练集: 0.7513 | 验证集: 0.7723
+训练结束！已恢复验证集最高准确率（0.7723）时的模型参数。
 ✅ 模型参数已成功保存到 lenet_params.pkl！
-最终测试结果为：0.5407
+最终测试结果为：0.7648
 </pre>
 
 ---
 
 ### 📊 第三阶段：工程化完善
+- **继续调大训练轮次**：将 `epochs` 从 `50` 增加至 `100+`，让模型有充足时间收敛至更高的精度（目标突破 90%）。
+- **尝试加入批归一化**：如果 `100-150` 个 `epoch` 后还是卡在90%上下，那就是古老的 LeNet-5 在纯NumPy下的理论瓶颈了。这时候就可以考虑往 layers.py 里加一层 Batch Normalization（批归一化）。
 - **绘制训练曲线**：使用 `matplotlib` 将 `train_loss_list`、`train_acc_list` 和 `val_acc_list` 绘制成折线图，直观展示收敛过程与过拟合情况。
 - **完善 README 与代码注释**：补充详细的调试记录与运行结果，让项目更具工程参考价值。
 
