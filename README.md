@@ -8,8 +8,14 @@
 
 ---
 
-[![📖 项目简介](https://img.shields.io/badge/📖-项目简介-blue)](README.md)
-[![🚧 踩坑指南](https://img.shields.io/badge/🚧-踩坑指南-orange)](TROUBLESHOOTING.md)
+<div align="center">
+  <a href="README.md">
+    <img src="https://img.shields.io/badge/📖-项目简介-blue" alt="项目简介" height="35">
+  </a>
+  <a href="TROUBLESHOOTING.md">
+    <img src="https://img.shields.io/badge/🚧-踩坑指南-orange" alt="踩坑指南" height="35">
+  </a>
+</div>
 
 ---
 
