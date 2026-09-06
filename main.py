@@ -1,4 +1,6 @@
 import numpy as np
+import os
+import matplotlib.pyplot as plt
 from dataset.mnist import load_mnist
 from lenet5 import LeNet5
 from trainer import Trainer
@@ -36,7 +38,7 @@ trainer = Trainer(
     t_train,
     x_val,
     t_val,
-    epochs=50,
+    epochs=10,
     mini_batch_size=256,
     optimizer="Adam",
     optimizer_param={"lr": 0.001},
@@ -49,3 +51,39 @@ save_params(network, "lenet_params.pkl")
 # load_params(network, "lenet_params.pkl")
 accuracy=network.accuracy(x_test,t_test)
 print(f"最终测试结果为：{accuracy:.4f}")
+
+# ================= 画图（训练结束后做） =================
+# 设置中文字体，防止乱码
+# 用来正常显示中文标签（Windows 默认用黑体）
+plt.rcParams['font.sans-serif'] = ['SimHei']
+# 用来正常显示负号
+plt.rcParams['axes.unicode_minus'] = False
+# 创建画布，画两个子图：左边看Loss，右边看准确率
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+# 左边：Loss 曲线
+axes[0].plot(trainer.train_loss_list, label='训练损失', color='blue')
+axes[0].set_xlabel('迭代次数')
+axes[0].set_ylabel('损失值')
+axes[0].set_title('训练损失曲线')
+axes[0].legend()
+axes[0].grid(True)
+
+# 右边：准确率曲线
+axes[1].plot(trainer.train_acc_list, label='训练准确率', color='green', marker='o')
+axes[1].plot(trainer.val_acc_list, label='验证准确率', color='red', marker='s')
+axes[1].set_xlabel('训练轮数 (Epoch)')
+axes[1].set_ylabel('准确率')
+axes[1].set_title('训练与验证准确率对比')
+axes[1].legend()
+axes[1].grid(True)
+
+plt.tight_layout()
+
+if not os.path.exists('assets'):
+    os.makedirs('assets')  # 创建一个存放图片的文件夹
+plt.savefig('assets/training_curves.png', dpi=300, bbox_inches='tight')
+
+plt.show()
+
+
