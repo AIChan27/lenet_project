@@ -53,9 +53,7 @@ def cross_entropy_error(y, t):
 
 
 # 数据增强---几何变换：平移、翻转、旋转
-def data_augmentation(x):
-    max_shift = 2
-    max_rotate = 15
+def data_augmentation(x,max_shift=2,max_rotate = 15):
     batch_size = x.shape[0]
     x_aug = x.copy()
     for i in range(batch_size):

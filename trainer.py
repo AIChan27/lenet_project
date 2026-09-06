@@ -100,10 +100,10 @@ class Trainer:
         # 循环开始
         for epoch in range(self.epochs):
 
-            # # 每隔 15 个 epoch，学习率缩小 10 倍
-            # if epoch != 0 and epoch % 15 == 0:
-            #     self.optimizer.lr *= 0.1
-            #     print(f"第 {epoch} 个 epoch，学习率已衰减为 {self.optimizer.lr}")
+            # 每隔 15 个 epoch，学习率缩小 10 倍
+            if epoch != 0 and epoch % 40 == 0:
+                self.optimizer.lr *= 0.1
+                print(f"第 {epoch} 个 epoch，学习率已衰减为 {self.optimizer.lr}")
 
             # --- ① 平时写作业（训练阶段） ---
             # 抽取 mini-batch 将庞大的训练集进行拆分
@@ -111,8 +111,8 @@ class Trainer:
             x_batch = self.x_train[batch_mask]
             t_batch = self.t_train[batch_mask]
             # # 数据增强:几何变换+添加噪声
-            # x_batch=data_augmentation(x_batch)
-            # x_batch=add_noise(x_batch,sigma=0.02)
+            x_batch=data_augmentation(x_batch,max_shift=1,max_rotate=5)
+            x_batch=add_noise(x_batch,sigma=0.005)
             # 前向、反向，更新参数
             grads = self.network.gradient(x_batch, t_batch)
             self.optimizer.update(self.network.params, grads)
