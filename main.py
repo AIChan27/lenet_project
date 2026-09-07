@@ -41,7 +41,7 @@ trainer = Trainer(
     epochs=100,
     mini_batch_size=256,
     optimizer="Adam",
-    optimizer_param={"lr": 0.001},
+    optimizer_param={"lr": 0.01},
 )
 trainer.train()
 # 4. 训练完毕，保存参数

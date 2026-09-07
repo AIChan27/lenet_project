@@ -96,14 +96,14 @@ class Trainer:
         best_val_acc = 0.0
         best_params = None
         # 早停耐心值：连续5轮验证集没提升就停下
-        patience = 5
+        patience = 15
         # 循环开始
         for epoch in range(self.epochs):
 
-            # # 每隔 40 个 epoch，学习率缩小 10 倍
-            # if epoch != 0 and epoch % 40 == 0:
-            #     self.optimizer.lr *= 0.1
-            #     print(f"第 {epoch} 个 epoch，学习率已衰减为 {self.optimizer.lr}")
+            # 每隔 40 个 epoch，学习率缩小 10 倍
+            if epoch != 0 and epoch % 50 == 0:
+                self.optimizer.lr *= 0.1
+                print(f"第 {epoch} 个 epoch，学习率已衰减为 {self.optimizer.lr}")
 
             # --- ① 平时写作业（训练阶段） ---
             # 抽取 mini-batch 将庞大的训练集进行拆分
