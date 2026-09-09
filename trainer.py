@@ -97,6 +97,8 @@ class Trainer:
         best_params = None
         # 早停耐心值：连续5轮验证集没提升就停下
         patience = 15
+        # ★★★ 必加！★ 记录连续“没进步”的轮数
+        no_improve_count = 0
         # 循环开始
         for epoch in range(self.epochs):
 
@@ -114,6 +116,8 @@ class Trainer:
             # x_batch=data_augmentation(x_batch,max_shift=1,max_rotate=5)
             # x_batch=add_noise(x_batch,sigma=0.005)
             # 前向、反向，更新参数
+            # 训练循环里，确保是 train_flag=True
+            self.network.train_flag=True
             grads = self.network.gradient(x_batch, t_batch)
             self.optimizer.update(self.network.params, grads)
             # 记录 Loss
@@ -122,6 +126,8 @@ class Trainer:
             # --- ② 模拟考（验证阶段） ---
             # 一个 epoch 结束，检查训练集和验证集准确率
             # train_acc：训练集 val_acc：验证集
+            # 验证阶段里，确保是 train_flag=False
+            self.network.train_flag=False
             train_acc = self.network.accuracy(self.x_train, self.t_train)
             val_acc = self.network.accuracy(self.x_val, self.t_val)
             self.train_acc_list.append(train_acc)

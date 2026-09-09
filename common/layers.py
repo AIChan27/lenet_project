@@ -2,7 +2,17 @@ import numpy as np
 from common.functions import *
 from common.util import *
 
-# Conv-->ReLU-->Pooling（MAX）-->Conv-->ReLU-->Pooling（MAX）-->Conv-->Affine-->Affine-->Softmax
+"""
+----------------------------------------------------------------------
+Convolution --> Batch Normalization --> ReLU
+--> Pooling
+--> Convolution --> Batch Normalization --> ReLU
+--> Pooling
+--> 展平+Affine1 (256→120) --> Batch Normalization --> ReLU
+--> Affine2 (120→84) --> Batch Normalization --> ReLU
+--> Affine3 (84→10) --> Softmax
+----------------------------------------------------------------------
+"""
 
 
 class Convolution:
@@ -27,7 +37,7 @@ class Convolution:
         self.dW = None
         self.db = None
 
-    def forward(self, x):
+    def forward(self, x, train_flag=True):
         # 准备数据并确定输出数据规模
         N, C, H, W = x.shape
         FN, C, FH, FW = self.W.shape
@@ -51,11 +61,144 @@ class Convolution:
         return dx
 
 
+class BatchNormalization:
+    """
+    ----------------------------------------------------------------------
+    要点：
+    Batch Normalization 是对“通道 C”做归一化，而不是对空间位置，所以要对卷积四维数据进行展平处理。
+    正向传播原理，其实是对数据标准化，然后将标准化的数据进行平移和缩放变换
+    ----------------------------------------------------------------------
+    """
+
+    def __init__(
+        self, running_mean=None, running_var=None, gamma=1, beta=0, momentum=0.9
+    ):
+        self.input_shape = None
+        # 测试时使用的全局均值和方差
+        self.running_mean = running_mean
+        self.running_var = running_var
+        # 滑动平均的动量（通常为0.9）
+        self.momentum = momentum
+        # 均值 μB
+        self.mu = None
+        # 方差 σB²
+        self.var = None
+        # 标准化 ẋi
+        self.x_norm = None
+        # ε 防止分母为 0
+        self.eps = 1e-7
+        # 缩放与平移公式中的 γ、β
+        self.gamma = gamma
+        self.beta = beta
+        # γ 的梯度
+        self.dgamma = None
+        # β 的梯度
+        self.dbeta = None
+        # 标准化的误差
+        self.dx_norm = None
+        # 方差 σ² 的梯度
+        self.dvar = None
+        # 均值 μ 的梯度
+        self.dmu = None
+
+    def forward(self, x, train_flag=True):
+        """
+        ----------------------------------------------------------------------
+        前置准备：
+        保存输入形状，用于反向传播时恢复 4D 形状
+        维度变换：如果是卷积层输出 (N, C, H, W)，需转置并展平为 (N*H*W, C)
+        初始化全局滑动统计量（第一次运行）
+        ----------------------------------------------------------------------
+        """
+        # 保存输入形状，用于反向传播时恢复 4D 形状
+        self.input_shape = x.shape
+        self.x = x
+        # 维度变换：如果是卷积层输出 (N, C, H, W)，需转置并展平为 (N*H*W, C)
+        if x.ndim == 4:
+            N, C, H, W = x.shape
+            x = x.transpose(0, 2, 3, 1).reshape(-1, C)
+            D = C
+        else:
+            N, D = x.shape
+        # 初始化全局滑动统计量（第一次运行）
+        if self.running_mean is None:
+            self.running_mean = np.zeros(D)
+            self.running_var = np.zeros(D)
+        if train_flag:
+            # 【公式1】：计算均值 μB
+            # self.mu = np.sum(x, axis=0)/x.shape[0]
+            self.mu = np.mean(x, axis=0)
+            # 【公式2】：计算方差 σB²
+            # self.var = np.sum((x - self.mu) ** 2, axis=0) / x.shape[0]
+            self.var = np.mean((x - self.mu) ** 2, axis=0)
+            # 【公式3】：标准化 ẋi（加上 ε 防止分母为 0）
+            self.x_norm = (x - self.mu) / np.sqrt(self.var + self.eps)
+            # 【隐藏公式（训练模式核心）】：用滑动平均更新全局统计量
+            # 公式：running_mean = momentum * running_mean + (1 - momentum) * mu
+            self.running_mean = (
+                self.momentum * self.running_mean + (1 - self.momentum) * self.mu
+            )
+            self.running_var = (
+                self.momentum * self.running_var + (1 - self.momentum) * self.var
+            )
+        else:
+            # 【公式3的测试版】：测试时（推理）绝对不能偷看当前 batch 的均值！
+            # 必须使用训练期间保存好的全局统计量 running_mean / running_var
+            self.x_norm = (x - self.running_mean) / np.sqrt(self.running_var + self.eps)
+        # 【公式4】：缩放与平移 yi = γ * ẋi + β
+        out = self.gamma * self.x_norm + self.beta
+        # 【维度恢复】：将展平的 (N*H*W, C) 恢复回 (N, C, H, W)
+        if self.x.ndim == 4:
+            out = out.reshape(N, H, W, C).transpose(0, 3, 1, 2)
+        return out
+
+    def backward(self, dout):
+        # 处理 4D 数据（转置展平，与正向保持一致）
+        if self.x.ndim == 4:
+            N, C, H, W = self.input_shape
+            dout = dout.transpose(0, 2, 3, 1).reshape(-1, C)
+            x = self.x.transpose(0, 2, 3, 1).reshape(-1, C)
+            m = x.shape[0]
+        else:
+            N, D = self.x.shape
+            x = self.x
+            m = x.shape[0]
+        # 【公式】：γ 的梯度
+        self.dgamma = np.sum(dout * self.x_norm, axis=0)
+        # 【公式】：β 的梯度
+        self.dbeta = np.sum(dout, axis=0)
+        # 【公式】：标准化的误差
+        self.dx_norm = dout * self.gamma
+        # 【公式】：方差 σ² 的梯度
+        self.dvar = np.sum(
+            dout
+            * self.gamma
+            * (x - self.mu)
+            * (-0.5)
+            * (self.var + self.eps) ** (-1.5),
+            axis=0,
+        )
+        # 【公式】：均值 μ 的梯度
+        self.dmu = np.sum(
+            dout * self.gamma * (-1) / np.sqrt(self.var + self.eps), axis=0
+        ) + self.dvar * np.mean(-2 * (x - self.mu), axis=0)
+        # 【核心公式：dx】：
+        dx = (
+            dout * self.gamma / np.sqrt(self.var + self.eps)
+            + self.dvar * 2 * (x - self.mu) / m
+            + self.dmu / m
+        )
+        # 【维度恢复】：将梯度还原为 (N, C, H, W) 交给卷积层
+        if self.x.ndim == 4:
+            dx = dx.reshape(N, H, W, C).transpose(0, 3, 1, 2)
+        return dx
+
+
 class ReLU:
     def __init__(self):
         self.mask = None
 
-    def forward(self, x):
+    def forward(self, x, train_flag=True):
         # out = np.maximum(0, x)
         self.mask = x <= 0
         out = x.copy()
@@ -77,7 +220,7 @@ class Pooling:
         self.x = None
         self.arg_max = None
 
-    def forward(self, x):
+    def forward(self, x, train_flag=True):
         N, C, H, W = x.shape
         out_h = int((H - self.pool_h) / self.stride + 1)
         out_w = int((W - self.pool_w) / self.stride + 1)
@@ -130,7 +273,7 @@ class Affine:
         self.dW = None
         self.db = None
 
-    def forward(self, x):
+    def forward(self, x, train_flag=True):
         self.original_x_shape = x.shape
         x = x.reshape(x.shape[0], -1)
         self.x = x

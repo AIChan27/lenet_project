@@ -5,21 +5,21 @@ from common.layers import *
 
 """
 ----------------------------------------------------------------------
-层名称	操作	输入维度	输出维度	参数/备注
+层名称	        操作	                    输入维度	     输出维度	参数/备注
 
-C1	卷积 + ReLU	(N, 1, 28, 28)	(N, 6, 24, 24)	6个 5x5，步长1，无填充
+C1	卷积 + Batch Norm + ReLU	        (N, 1, 28, 28)	(N, 6, 24, 24)	6个 5x5，步长1，无填充
 
-S2	池化	(N, 6, 24, 24)	(N, 6, 12, 12)	窗口 2x2，步长2
+S2	池化	                            (N, 6, 24, 24)	(N, 6, 12, 12)	窗口 2x2，步长2
 
-C3	卷积 + ReLU	(N, 6, 12, 12)	(N, 16, 8, 8)	16个 5x5，步长1
+C3	卷积 + Batch Norm + ReLU	        (N, 6, 12, 12)	(N, 16, 8, 8)	16个 5x5，步长1
 
-S4	池化	(N, 16, 8, 8)	(N, 16, 4, 4)	窗口 2x2，步长2
+S4	池化	                            (N, 16, 8, 8)	(N, 16, 4, 4)	窗口 2x2，步长2
 
-F5	展平 + Affine	(N, 256)	(N, 120)	全连接
+F5	展平 + Affine + Batch Norm + ReLU	    (N, 256)	    (N, 120)	全连接
 
-F6	Affine	(N, 120)	(N, 84)	全连接
+F6	Affine + Batch Norm + ReLU	            (N, 120)	    (N, 84)	    全连接
 
-Out	Affine + Softmax	(N, 84)	(N, 10)	输出层
+Out	Affine + Softmax	                    (N, 84)	        (N, 10)	    输出层
 ----------------------------------------------------------------------
 """
 
@@ -34,7 +34,10 @@ class LeNet5:
         hidden_size_2=84,
         output_size=10,
         weight_init_std=0.01,
+        train_flag=True
     ):
+        # 是否为训练模式
+        self.train_flag=train_flag
         # 初始化权重
         self.params = {}
         # # C1	卷积 + ReLU	(N, 1, 28, 28)	(N, 6, 24, 24)	6个 5x5，步长1，无填充
@@ -42,18 +45,24 @@ class LeNet5:
         # self.params["b1"] = np.zeros(6)
 
         # C1 卷积层使用 He 初始化（输入通道 * 卷积核大小 = node_num_1）
+        # 卷积 + Batch Norm + ReLU
         node_num_1 = input_dim[0] * 5 * 5  # 第一层：1 * 5 * 5 = 25
         self.params["W1"] = np.random.randn(6, input_dim[0], 5, 5) *math.sqrt(2) / np.sqrt(node_num_1)
         self.params["b1"] = np.zeros(6)
+        self.params['gamma1'] = np.ones(6)   
+        self.params['beta1'] = np.zeros(6)   
 
         # # C3	卷积 + ReLU	(N, 6, 12, 12)	(N, 16, 8, 8)	16个 5x5，步长1
         # self.params["W2"] = weight_init_std * np.random.randn(16, 6, 5, 5)
         # self.params["b2"] = np.zeros(16)
 
         # C3 卷积层使用 He 初始化（输入通道 * 卷积核大小 = node_num_2）
+        # 卷积 + Batch Norm + ReLU
         node_num_2 = 6 * 5 * 5  # 第二层：6 * 5 * 5 = 150
         self.params["W2"] = np.random.randn(16, 6, 5, 5) *math.sqrt(2) / np.sqrt(node_num_2)
         self.params["b2"] = np.zeros(16)
+        self.params['gamma2'] = np.ones(16) 
+        self.params['beta2'] = np.zeros(16)
 
         # # F5	展平+Affine + ReLU	(N, 256)	(N, 120)	全连接
         # # 为什么是 256 ？因为输入是 16 * 4 * 4 = 256
@@ -61,8 +70,11 @@ class LeNet5:
         # self.params["b3"] = np.zeros(hidden_size_1)
 
         # F5 展平+Affine + ReLU 全连接层使用 He 初始化（node_num = 16 * 4 * 4 = 256）
+        # 展平 + Affine + Batch Norm + ReLU
         self.params["W3"] = np.random.randn(256, hidden_size_1) *math.sqrt(2) / np.sqrt(256)
         self.params["b3"] = np.zeros(hidden_size_1)
+        self.params['gamma3'] = np.ones(hidden_size_1) 
+        self.params['beta3'] = np.zeros(hidden_size_1)
 
         # # F6	Affine + ReLU	(N, 120)	(N, 84)	全连接
         # self.params["W4"] = weight_init_std * np.random.randn(
@@ -71,8 +83,11 @@ class LeNet5:
         # self.params["b4"] = np.zeros(hidden_size_2)
 
         # F6 Affine + ReLU 全连接层（120 -> 84）
+        # Affine + Batch Norm + ReLU
         self.params["W4"] = np.random.randn(hidden_size_1, hidden_size_2) *math.sqrt(2) / np.sqrt(hidden_size_1)
         self.params["b4"] = np.zeros(hidden_size_2)
+        self.params['gamma4'] = np.ones(hidden_size_2) 
+        self.params['beta4'] = np.zeros(hidden_size_2)
 
         # # Out	Affine + Softmax	(N, 84)	(N, 10)	输出层
         # self.params["W5"] = weight_init_std * np.random.randn(
@@ -84,7 +99,17 @@ class LeNet5:
         self.params["W5"] = np.random.randn(hidden_size_2, output_size) *math.sqrt(2) / np.sqrt(hidden_size_2)
         self.params["b5"] = np.zeros(output_size)
         # 生成层：
-        # Convolution-->ReLU-->Pooling-->Convolution-->ReLU-->Pooling-->展平+Affine1 (256→120)-->ReLU-->Affine2 (120→84)-->ReLU-->Affine3 (84→10)-->Softmax
+        """
+        ----------------------------------------------------------------------
+        Convolution --> Batch Normalization --> ReLU
+        --> Pooling
+        --> Convolution --> Batch Normalization --> ReLU
+        --> Pooling
+        --> 展平+Affine1 (256→120) --> Batch Normalization --> ReLU
+        --> Affine2 (120→84) --> Batch Normalization --> ReLU
+        --> Affine3 (84→10) --> Softmax
+        ----------------------------------------------------------------------
+        """
         self.layers = OrderedDict()
         self.layers["Convolution_1"] = Convolution(
             self.params["W1"],
@@ -92,6 +117,7 @@ class LeNet5:
             conv_param_1["stride"],
             conv_param_1["pad"],
         )
+        self.layers["BatchNormalization_1"]=BatchNormalization(gamma=self.params["gamma1"], beta=self.params["beta1"], momentum=0.9)
         self.layers["ReLU_1"] = ReLU()
         self.layers["Pooling_1"] = Pooling(pool_h=2, pool_w=2, stride=2)
         self.layers["Convolution_2"] = Convolution(
@@ -100,19 +126,22 @@ class LeNet5:
             conv_param_2["stride"],
             conv_param_2["pad"],
         )
+        self.layers["BatchNormalization_2"]=BatchNormalization(gamma=self.params["gamma2"], beta=self.params["beta2"], momentum=0.9)
         self.layers["ReLU_2"] = ReLU()
         self.layers["Pooling_2"] = Pooling(pool_h=2, pool_w=2, stride=2)
         # 展平+Affine1 (256→120)-->ReLU-->Affine2 (120→84)-->ReLU-->Affine3 (84→10)-->Softmax
         self.layers["Affine_1"] = Affine(self.params["W3"], self.params["b3"])
+        self.layers["BatchNormalization_3"]=BatchNormalization(gamma=self.params["gamma3"], beta=self.params["beta3"], momentum=0.9)
         self.layers["ReLU_3"] = ReLU()
         self.layers["Affine_2"] = Affine(self.params["W4"], self.params["b4"])
+        self.layers["BatchNormalization_4"]=BatchNormalization(gamma=self.params["gamma4"], beta=self.params["beta4"], momentum=0.9)
         self.layers["ReLU_4"] = ReLU()
         self.layers["Affine_3"] = Affine(self.params["W5"], self.params["b5"])
         self.last_layer = SoftmaxWithLoss()
 
     def predict(self, x):
         for layer in self.layers.values():
-            x = layer.forward(x)
+            x = layer.forward(x,self.train_flag)
         return x
 
     def loss(self, x, t):
@@ -151,12 +180,20 @@ class LeNet5:
         grads = {}
         grads["W1"] = self.layers["Convolution_1"].dW
         grads["b1"] = self.layers["Convolution_1"].db
+        grads['gamma1'] = self.layers["BatchNormalization_1"].dgamma
+        grads['beta1'] = self.layers["BatchNormalization_1"].dbeta
         grads["W2"] = self.layers["Convolution_2"].dW
         grads["b2"] = self.layers["Convolution_2"].db
+        grads['gamma2'] = self.layers["BatchNormalization_2"].dgamma
+        grads['beta2'] = self.layers["BatchNormalization_2"].dbeta
         grads["W3"] = self.layers["Affine_1"].dW
         grads["b3"] = self.layers["Affine_1"].db
+        grads['gamma3'] = self.layers["BatchNormalization_3"].dgamma
+        grads['beta3'] = self.layers["BatchNormalization_3"].dbeta
         grads["W4"] = self.layers["Affine_2"].dW
         grads["b4"] = self.layers["Affine_2"].db
+        grads['gamma4'] = self.layers["BatchNormalization_4"].dgamma
+        grads['beta4'] = self.layers["BatchNormalization_4"].dbeta
         grads["W5"] = self.layers["Affine_3"].dW
         grads["b5"] = self.layers["Affine_3"].db
         return grads

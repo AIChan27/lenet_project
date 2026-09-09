@@ -2,7 +2,7 @@ import numpy as np
 
 
 def numerical_gradient_1d(f, x):
-    h = 1e-4
+    h = 1e-5
     grad = np.zeros_like(x)  # 生成和x形状相同的数组
     for idx in range(x.size):
         tmp_val = x[idx]
@@ -29,7 +29,7 @@ def numerical_gradient_2d(f, X):
 
 
 def numerical_gradient(f, x):
-    h = 1e-4
+    h = 1e-5
     grad = np.zeros_like(x)
     """
     ----------------------------------------------------------------------

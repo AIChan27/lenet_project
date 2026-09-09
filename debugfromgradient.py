@@ -15,6 +15,7 @@ x_batch = x_train[:4]
 t_batch = t_train[:4]
 
 network = LeNet5(input_dim=(1, 28, 28))
+network.train_flag = True
 # 1. 用你的反向传播算梯度
 grads_backprop = network.gradient(x_batch, t_batch)
 
