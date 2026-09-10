@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from dataset.mnist import load_mnist
 from lenet5 import LeNet5
 from trainer import Trainer
-from save_and_load import save_params, load_params
+from save_and_load import save_params
 
 """
 ----------------------------------------------------------------------
@@ -38,7 +38,7 @@ trainer = Trainer(
     t_train,
     x_val,
     t_val,
-    epochs=100,
+    epochs=150,
     mini_batch_size=256,
     optimizer="Adam",
     optimizer_param={"lr": 0.01},
@@ -49,6 +49,10 @@ save_params(network, "lenet_params.pkl")
 # 5. （可选演示）加载参数：模拟下次开机重新加载模型
 # 注意：这一步会覆盖当前网络，但因为我们刚保存的就是最好的，所以没问题
 # load_params(network, "lenet_params.pkl")
+
+# ★★★ 极其重要！测试前必须切换到推理模式！ ★★★
+network.train_flag = False
+
 accuracy=network.accuracy(x_test,t_test)
 print(f"最终测试结果为：{accuracy:.4f}")
 

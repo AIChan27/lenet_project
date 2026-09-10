@@ -98,9 +98,9 @@ class LeNet5:
         # Out Affine + Softmax 全连接层（84 -> 10）
         self.params["W5"] = np.random.randn(hidden_size_2, output_size) *math.sqrt(2) / np.sqrt(hidden_size_2)
         self.params["b5"] = np.zeros(output_size)
-        # 生成层：
         """
         ----------------------------------------------------------------------
+        生成层：
         Convolution --> Batch Normalization --> ReLU
         --> Pooling
         --> Convolution --> Batch Normalization --> ReLU

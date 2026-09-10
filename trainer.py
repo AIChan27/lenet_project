@@ -96,13 +96,13 @@ class Trainer:
         best_val_acc = 0.0
         best_params = None
         # 早停耐心值：连续5轮验证集没提升就停下
-        patience = 15
+        patience = 20
         # ★★★ 必加！★ 记录连续“没进步”的轮数
         no_improve_count = 0
         # 循环开始
         for epoch in range(self.epochs):
 
-            # 每隔 40 个 epoch，学习率缩小 10 倍
+            # 把学习率衰减推迟到 50 轮（等模型稳住了，再降学习率微调）
             if epoch != 0 and epoch % 50 == 0:
                 self.optimizer.lr *= 0.1
                 print(f"第 {epoch} 个 epoch，学习率已衰减为 {self.optimizer.lr}")
@@ -112,9 +112,17 @@ class Trainer:
             batch_mask = np.random.choice(self.train_size, self.batch_size)
             x_batch = self.x_train[batch_mask]
             t_batch = self.t_train[batch_mask]
-            # # 数据增强:几何变换+添加噪声
-            # x_batch=data_augmentation(x_batch,max_shift=1,max_rotate=5)
-            # x_batch=add_noise(x_batch,sigma=0.005)
+
+            # 数据增强:几何变换+添加噪声
+            # 把增强开始时间推迟到 50 轮（前50轮让模型吃透干净数据，稳稳冲到97%）
+            # if epoch > 50:
+            #     # 渐进式增强（你的逻辑是对的，但时机要往后挪）
+            #     strength = min((epoch - 50) / 30.0, 1.0)
+            #     max_rotate = int(3 * strength) + 1
+            #     max_shift = 1
+            #     x_batch = data_augmentation(x_batch, max_shift=max_shift, max_rotate=max_rotate)
+            #     x_batch = add_noise(x_batch, sigma=0.003 * strength)
+                
             # 前向、反向，更新参数
             # 训练循环里，确保是 train_flag=True
             self.network.train_flag=True

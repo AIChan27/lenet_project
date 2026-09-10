@@ -1,4 +1,9 @@
 import numpy as np
+from pathlib import Path
+from PIL import Image
+from lenet5 import LeNet5
+from save_and_load import load_params
+from common.functions import softmax
 from scipy.ndimage import rotate, zoom
 
 def random_augmentation(x, max_shift=2, max_rotate=15, scale_min=0.9, scale_max=1.1, crop_pad=2):
@@ -85,3 +90,84 @@ def add_noise(x, sigma=0.02):
     # 3. 最关键的一步！像素值不能低于0，也不能超过1。
     # np.clip(x, 0, 1) 会将小于0的数变成0，大于1的数变成1
     return np.clip(x_noisy, 0.0, 1.0)
+
+# import numpy as np
+
+# x = np.array([[1, 100, 50], [3, 200, 100]])
+
+# print(np.mean(x, axis=0))
+# print(np.sum(x, axis=0) / x.shape[0])
+
+# 第一步：处理图片
+base_dir = Path(__file__).parent
+img_dir = base_dir / "inferenceimg"
+jpg_files = list(img_dir.glob("*.jpg"))
+img_count = len(jpg_files)
+print(f"inference_img 文件夹下共有 {img_count} 张 JPG 图片。")
+
+imgnp = np.zeros((img_count, 1, 28, 28), dtype=np.float32)
+
+for count in range(img_count):
+    img = Image.open(jpg_files[count]).convert("L")
+    img = np.array(img) / 255.0
+    
+    if img.mean() > 0.5:
+        img = 1.0 - img
+        
+    # 寻找数字边界框
+    rows = np.any(img > 0.1, axis=1)
+    cols = np.any(img > 0.1, axis=0)
+    
+    if np.any(rows) and np.any(cols):
+        rmin, rmax = np.where(rows)[0][[0, -1]]
+        cmin, cmax = np.where(cols)[0][[0, -1]]
+        img_cropped = img[rmin:rmax+1, cmin:cmax+1]
+        if img_cropped.shape[0] > 0 and img_cropped.shape[1] > 0:
+            img = img_cropped
+    
+    h, w = img.shape
+    if h == 0 or w == 0:
+        continue  # 极端情况跳过
+    
+    # 【修改】让数字占更大比例，便于识别！
+    scale = 24.0 / max(h, w)
+    new_h = int(h * scale)
+    new_w = int(w * scale)
+    if new_h == 0:
+        new_h = 1
+    if new_w == 0:
+        new_w = 1
+    
+    img_pil = Image.fromarray((img * 255).astype(np.uint8)).resize((new_w, new_h))
+    img = np.array(img_pil) / 255.0
+    
+    canvas = np.zeros((28, 28))
+    top = (28 - new_h) // 2
+    left = (28 - new_w) // 2
+    canvas[top:top+new_h, left:left+new_w] = img
+    
+    imgnp[count, 0] = canvas
+
+    Image.fromarray((canvas * 255).astype(np.uint8)).save(f"preprocessed_{count}.png")
+
+# 第二步：加载模型并推理
+network = LeNet5(input_dim=(1, 28, 28))
+load_params(network, "lenet_params.pkl")
+
+# 极其重要：切换为推理模式！
+network.train_flag = False
+
+# 获取原始得分（Logits）
+logits = network.predict(imgnp)
+
+# 手动应用 Softmax 得到概率
+probs = softmax(logits)
+
+# 第三步：得出结论
+predictions = np.argmax(probs, axis=1)
+confidences = np.max(probs, axis=1)
+
+print("\n========== 推理结果展示 ==========")
+for i in range(img_count):
+    print(f"图片 {i+1}: 预测为数字 {predictions[i]}，置信度 {confidences[i]:.4f}")
+print("==================================")
